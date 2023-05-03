@@ -1,0 +1,37 @@
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: refs/heads/build
+jobs:
+- job: Job_1
+  displayName: Agent job
+  pool:
+    vmImage: windows-latest
+  steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 1
+  - task: AzurePowerShell@5
+    displayName: Inline PowerShell Script to correct .NETFramework,Version
+    inputs:
+      ConnectedServiceNameARM: 9e9xxxx-xxxx-xxxx-xxxx-7b4036xxxx
+      ScriptType: InlineScript
+      Inline: >
+        (Get-Content D:\a\1\s\DatabaseProject<ProjectName>DWH\DatabaseProject<ProjectName>DWH.sqlproj) -replace "v4.5", "v4.8" | Set-Content D:\a\1\s\DatabaseProject<ProjectName>DWH\DatabaseProject<ProjectName>DWH.sqlproj
+      TargetAzurePs: LatestVersion
+  - task: VSBuild@1
+    name: ''
+    displayName: Build dacpac for <ProjectName>DWH
+    inputs:
+      solution: '**/*.sqlproj'
+      msbuildArgs: /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation=”$(Build.ArtifactStagingDirectory)\\”
+      platform: Any CPU
+      configuration: Release
+      clean: true
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Build Artifact
+    inputs:
+      PathtoPublish: DatabaseProject<ProjectName>DWH/bin/output
+      ArtifactName: <ProjectName>dwh.dacpac
+...
